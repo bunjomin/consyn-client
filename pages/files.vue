@@ -1,11 +1,20 @@
 <template>
 	<div class="container">
 		<Header />
-		<div class="downloader" v-if="fetchedFile.fetched">
-			<a :href="fetchedFile.url" class="button" :download="`${fetchedFile.name}.${fetchedFile.extension}`">
-				<span>Download</span><span class="file-name">{{ fetchedFile.name }}</span>.<span class="file-extension">{{ fetchedFile.extension }}</span>
-			</a>
-		</div>
+		<template v-if="fetchedFile.fetched">
+			<div v-if="viewing">
+				<button class="button back" @click.prevent="viewing = false">Back</button>
+				<img :src="fetchedFile.url" :alt="fetchedFile.name">
+			</div>
+			<div class="downloader" v-else>
+				<template v-if="['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/webp'].includes(fetchedFile.mimeType)">
+					<button class="button view-image" @click.prevent="viewing = true">View Image</button>
+				</template>
+				<a :href="fetchedFile.url" class="button" :download="`${fetchedFile.name}.${fetchedFile.extension}`">
+					<span>Download</span><span class="file-name">{{ fetchedFile.name }}</span>.<span class="file-extension">{{ fetchedFile.extension }}</span>
+				</a>
+			</div>
+		</template>
 		<Loading v-else />
 	</div>
 </template>
@@ -27,9 +36,11 @@ export default {
 			node: null,
 			getFile: '',
 			apiUrl: null,
+			viewing: false,
 			fetchedFile: {
 				name: '',
 				extension: '',
+				mimeType: '',
 				url: '',
 				fetched: false
 			}
@@ -63,6 +74,7 @@ export default {
 			const url = URL.createObjectURL(blob);
 			this.fetchedFile.name = name;
 			this.fetchedFile.extension = extension;
+			this.fetchedFile.mimeType = mimeType;
 			this.fetchedFile.url = url;
 			this.fetchedFile.fetched = true;
 		},
@@ -93,6 +105,17 @@ export default {
 				@apply overflow-hidden overflow-ellipsis;
 			}
 		}
+	}
+}
+
+.button {
+
+	&.back {
+		@apply absolute top-0 left-0 ml-2 mt-2 z-10;
+	}
+
+	&.view-image {
+		@apply mr-2;
 	}
 }
 </style>
