@@ -14,8 +14,8 @@
 import * as IPFS from 'ipfs';
 import * as concat from 'uint8arrays/concat';
 import all from 'it-all';
-import Header from '../../components/header';
-import Loading from '../../components/spinner';
+import Header from '../components/header';
+import Loading from '../components/spinner';
 
 export default {
 	components: {
@@ -42,7 +42,10 @@ export default {
 		this.node = await IPFS.create();
 		window.node = this.node;
 		this.apiUrl = process.env.baseUrl;
-		this.getFile = this?.$route?.params?.id;
+		this.getFile = this?.$route?.query?.f;
+		if (!this.getFile) {
+			this.$router.push('/');
+		}
 		this.get();
 	},
 	async beforeDestroy () {

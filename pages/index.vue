@@ -53,7 +53,7 @@ export default {
 	},
 	computed: {
 		fileLinkText () {
-			return `${this.location ? this.location.origin : ''}/files/${this.fileResult ? this.fileResult.file : ''}`;
+			return `${this.location ? this.location.origin : ''}/files?f=${this.fileResult ? this.fileResult.file : ''}`;
 		}
 	},
 	async mounted () {
