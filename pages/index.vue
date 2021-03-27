@@ -139,6 +139,8 @@ export default {
 				}
 			});
 
+			await this.node.cat(cid, { length: 1 });
+
 			const [name, extension] = this.file.name.split('.');
 
 			const payload = {
