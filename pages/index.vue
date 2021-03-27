@@ -59,8 +59,13 @@ export default {
 		}
 	},
 	async mounted () {
-		if (window?.node?.stop) {
-			await window.node.stop();
+		try {
+			if (window?.node?.stop) {
+				await window.node.stop();
+			}
+		} catch (err) {
+			// eslint-disable-next-line no-console
+			console.log(err);
 		}
 		this.node = await IPFS.create();
 		window.node = this.node;
@@ -80,19 +85,12 @@ export default {
 		}
 	},
 	methods: {
-		copyToClipboard () {
-			navigator.permissions.query({ name: 'clipboard-write' }).then((result) => {
-				if (result.state === 'granted' || result.state === 'prompt') {
-					navigator.clipboard.writeText(this.fileLinkText).then(() => {
-						this.copied = true;
-						setTimeout(() => {
-							this.copied = false;
-						}, 2000);
-					}, function () {
-						/* clipboard write failed */
-					});
-				}
-			});
+		async copyToClipboard () {
+			await navigator.clipboard.writeText(this.fileLinkText);
+			this.copied = true;
+			setTimeout(() => {
+				this.copied = false;
+			}, 1000);
 		},
 		fileClick () {
 			this.$refs.fileInput.click();
@@ -163,15 +161,6 @@ export default {
 </script>
 
 <style lang="scss">
-@keyframes fadeOut {
-	from {
-		opacity: 1;
-	}
-	to {
-		opacity: 0;
-	}
-}
-
 .uploader, .share {
 	@apply px-6 py-6;
 }
@@ -189,7 +178,6 @@ export default {
 
 		&.active {
 			@apply opacity-100;
-			animation: fadeOut 1s ease-in 1s 1 forwards;
 		}
 	}
 
