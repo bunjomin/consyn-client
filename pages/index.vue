@@ -30,6 +30,8 @@
 
 <script>
 import * as IPFS from 'ipfs';
+import * as concat from 'uint8arrays/concat';
+import all from 'it-all';
 import Header from '../components/header';
 import Loading from '../components/spinner';
 
@@ -139,7 +141,7 @@ export default {
 				}
 			});
 
-			await this.node.cat(cid, { length: 1 });
+			concat(await all(this.node.cat(cid, { length: 1 })));
 
 			const [name, extension] = this.file.name.split('.');
 
