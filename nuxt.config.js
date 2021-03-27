@@ -71,6 +71,6 @@ export default {
 		}
 	},
 	env: {
-		baseUrl: env === 'production' ? 'https://api.consyn.io/dev' : 'http://localhost:3000/dev'
+		baseUrl: env === 'production' ? 'https://api.consyn.io' : 'http://localhost:3000/dev'
 	}
 };
