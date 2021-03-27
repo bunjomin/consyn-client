@@ -3,7 +3,7 @@
 		<Header />
 		<div class="downloader" v-if="fetchedFile.fetched">
 			<a :href="fetchedFile.url" class="button" :download="`${fetchedFile.name}.${fetchedFile.extension}`">
-				Download {{ fetchedFile.name }}.{{ fetchedFile.extension }}
+				<span>Download</span><span class="file-name">{{ fetchedFile.name }}</span>.<span class="file-extension">{{ fetchedFile.extension }}</span>
 			</a>
 		</div>
 		<Loading v-else />
@@ -78,5 +78,21 @@ export default {
 <style lang="scss">
 .downloader {
 	@apply px-6 py-4 flex justify-end;
+
+	a {
+		@apply max-w-full flex justify-center items-center whitespace-nowrap text-xs md:text-sm lg:text-base;
+
+		span {
+			@apply inline-block;
+
+			&:not(:last-child) {
+				@apply mr-1;
+			}
+
+			&.file-name {
+				@apply overflow-hidden overflow-ellipsis;
+			}
+		}
+	}
 }
 </style>

@@ -169,7 +169,8 @@ export default {
 	@apply mt-2 px-6 py-3 bg-blue-100 rounded-3xl cursor-pointer transition duration-200 ease-in-out hover:bg-blue-200;
 
 	pre {
-		@apply text-blue-900 inline-block text-xs;
+		@apply text-blue-900 inline-block text-xs overflow-ellipsis;
+		max-width: 80%;
 	}
 
 	.copied {
