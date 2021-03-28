@@ -1,18 +1,49 @@
 <template>
 	<main class="app">
 		<section class="content">
-			<Nuxt />
+			<Nuxt @notification="parseNotification" />
 		</section>
+		<Toast :notifications="notifications" @shift="shiftNotifications" />
 		<Footer />
 	</main>
 </template>
 
 <script>
+import { v4 as uuid } from 'uuid';
 import Footer from '../components/footer';
+import Toast from '../components/toast/toast-wrapper';
 
 export default {
 	components: {
-		Footer
+		Footer,
+		Toast
+	},
+	data () {
+		return {
+			notifications: []
+		};
+	},
+	mounted () {
+		window.consyn = {
+			parseNotification: this.parseNotification
+		};
+	},
+	methods: {
+		parseNotification (notification) {
+			const identifier = uuid();
+			// eslint-disable-next-line no-console
+			console.log({
+				identifier,
+				...notification
+			});
+			this.notifications.push({
+				identifier: uuid(),
+				...notification
+			});
+		},
+		shiftNotifications () {
+			this.notifications.shift();
+		}
 	}
 };
 </script>
@@ -43,7 +74,7 @@ export default {
 }
 
 html {
-	@apply relative box-border text-base font-normal not-italic;
+	@apply relative box-border font-normal not-italic text-sm md:text-base;
 	font-family: 'Rubik', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
 	* {
@@ -89,7 +120,7 @@ p {
 }
 
 .content {
-	@apply w-full max-w-2xl rounded-3xl overflow-hidden bg-white shadow-lg;
+	@apply w-full max-w-2xl rounded-3xl overflow-hidden bg-white shadow-lg m-2 md:m-0;
 }
 
 .button {
@@ -99,5 +130,9 @@ p {
 input[type="file"] {
 	@apply absolute opacity-0;
 	z-index: -1;
+}
+
+.file-name {
+	@apply overflow-hidden overflow-ellipsis text-right;
 }
 </style>

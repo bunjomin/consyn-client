@@ -3,16 +3,19 @@
 		<Header />
 		<template v-if="fetchedFile.fetched">
 			<div v-if="viewing">
-				<button class="button back" @click.prevent="viewing = false">Back</button>
-				<img :src="fetchedFile.url" :alt="fetchedFile.name">
+				<Preview :type="viewingType.type" :fetched-file="fetchedFile" @back="viewing = false" />
 			</div>
 			<div class="downloader" v-else>
-				<template v-if="['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/webp'].includes(fetchedFile.mimeType)">
-					<button class="button view-image" @click.prevent="viewing = true">View Image</button>
-				</template>
-				<a :href="fetchedFile.url" class="button" :download="`${fetchedFile.name}.${fetchedFile.extension}`">
-					<span>Download</span><span class="file-name">{{ fetchedFile.name }}</span>.<span class="file-extension">{{ fetchedFile.extension }}</span>
-				</a>
+				<h2 class="file-name">Download File</h2>
+				<h3>{{ fetchedFile.name }}.{{ fetchedFile.extension }}</h3>
+				<div class="button-wrapper">
+					<template v-if="viewingType">
+						<button class="button preview" @click.prevent="viewing = true">View {{ viewingType.label }}</button>
+					</template>
+					<a :href="fetchedFile.url" class="button" :download="`${fetchedFile.name}.${fetchedFile.extension}`">
+						Download
+					</a>
+				</div>
 			</div>
 		</template>
 		<Loading v-else />
@@ -25,11 +28,13 @@ import * as concat from 'uint8arrays/concat';
 import all from 'it-all';
 import Header from '../components/header';
 import Loading from '../components/spinner';
+import Preview from '../components/preview/index';
 
 export default {
 	components: {
 		Header,
-		Loading
+		Loading,
+		Preview
 	},
 	data() {
 		return {
@@ -45,6 +50,22 @@ export default {
 				fetched: false
 			}
 		};
+	},
+	computed: {
+		viewingType () {
+			if (['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/webp'].includes(this.fetchedFile?.mimeType?.toLowerCase())) {
+				return {
+					type: 'ImagePreview',
+					label: 'Image'
+				};
+			} else if (['video/ogg', 'video/mp4', 'video/H264', 'video/h264-rcdo', 'video/h264-svc', 'video/webm'].includes(this.fetchedFile?.mimeType?.toLowerCase())) {
+				return {
+					type: 'VideoPreview',
+					label: 'Video'
+				};
+			}
+			return null;
+		}
 	},
 	async mounted () {
 		if (window.node) {
@@ -89,32 +110,24 @@ export default {
 
 <style lang="scss">
 .downloader {
-	@apply px-6 py-4 flex justify-end;
+	@apply px-2 py-3 md:px-6 md:py-4 flex flex-col items-center;
 
-	a {
-		@apply max-w-full flex justify-center items-center whitespace-nowrap text-xs md:text-sm lg:text-base;
-
-		span {
-			@apply inline-block;
-
-			&:not(:last-child) {
-				@apply mr-1;
-			}
-
-			&.file-name {
-				@apply overflow-hidden overflow-ellipsis;
-			}
-		}
+	h2 {
+		@apply mb-1;
 	}
+
+	h3 {
+		@apply text-center text-lg font-normal mb-3;
+	}
+}
+
+.button-wrapper {
+	@apply flex justify-center items-center;
 }
 
 .button {
 
-	&.back {
-		@apply absolute top-0 left-0 ml-2 mt-2 z-10;
-	}
-
-	&.view-image {
+	&.preview {
 		@apply mr-2;
 	}
 }

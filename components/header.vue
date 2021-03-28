@@ -14,7 +14,7 @@ export default {};
 
 <style lang="scss" scoped>
 header {
-	@apply px-6 py-4 bg-blue-100;
+	@apply px-2 py-3 md:px-6 md:py-4 bg-blue-100;
 
 	a {
 
