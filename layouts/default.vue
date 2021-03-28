@@ -1,21 +1,26 @@
 <template>
-	<main class="app">
-		<section class="content">
-			<Nuxt @notification="parseNotification" />
-		</section>
-		<Toast :notifications="notifications" @shift="shiftNotifications" />
-		<Footer />
-	</main>
+	<div>
+		<main class="app">
+			<section class="content">
+				<Nuxt @notification="parseNotification" />
+			</section>
+			<Toast :notifications="notifications" @shift="shiftNotifications" />
+			<Footer />
+		</main>
+		<Donation />
+	</div>
 </template>
 
 <script>
 import { v4 as uuid } from 'uuid';
 import Footer from '../components/footer';
+import Donation from '../components/donation';
 import Toast from '../components/toast/toast-wrapper';
 
 export default {
 	components: {
 		Footer,
+		Donation,
 		Toast
 	},
 	data () {
@@ -78,7 +83,7 @@ html {
 	font-family: 'Rubik', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
 	* {
-		@apply relative;
+		@apply relative outline-none focus:outline-none;
 	}
 }
 
@@ -116,7 +121,7 @@ p {
 }
 
 .app {
-	@apply min-h-screen min-w-full bg-blue-50 flex items-center justify-center;
+	@apply min-h-9/10 min-w-full bg-blue-50 flex flex-col items-center justify-center;
 }
 
 .content {
