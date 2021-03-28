@@ -2,7 +2,7 @@
 	<div class="preview">
 		<component :is="type" :fetched-file="fetchedFile" />
 		<button class="button back" @click.prevent="back">
-			Back
+			Back to Download
 		</button>
 	</div>
 </template>

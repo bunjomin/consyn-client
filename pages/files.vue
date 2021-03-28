@@ -54,11 +54,13 @@ export default {
 	computed: {
 		viewingType () {
 			if (['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/webp'].includes(this.fetchedFile?.mimeType?.toLowerCase())) {
+				this.viewing = true;
 				return {
 					type: 'ImagePreview',
 					label: 'Image'
 				};
 			} else if (['video/ogg', 'video/mp4', 'video/H264', 'video/h264-rcdo', 'video/h264-svc', 'video/webm'].includes(this.fetchedFile?.mimeType?.toLowerCase())) {
+				this.viewing = true;
 				return {
 					type: 'VideoPreview',
 					label: 'Video'
