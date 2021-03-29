@@ -35,12 +35,6 @@ export default {
 	},
 	methods: {
 		parseNotification (notification) {
-			const identifier = uuid();
-			// eslint-disable-next-line no-console
-			console.log({
-				identifier,
-				...notification
-			});
 			this.notifications.push({
 				identifier: uuid(),
 				...notification

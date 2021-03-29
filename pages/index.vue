@@ -258,6 +258,7 @@ export default {
 					});
 				}
 
+				const size = this.file.size;
 				const [name, extension] = this.file.name.split('.');
 
 				const payload = {
@@ -265,6 +266,7 @@ export default {
 					extension,
 					mimeType: this.file.type,
 					key: keyValue,
+					size,
 					cid
 				};
 

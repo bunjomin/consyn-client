@@ -10,6 +10,6 @@ export default {};
 
 <style lang="scss" scoped>
 svg {
-	@apply m-auto;
+	@apply m-auto w-20 h-20;
 }
 </style>

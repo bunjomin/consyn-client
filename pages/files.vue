@@ -1,7 +1,13 @@
 <template>
 	<div class="container">
 		<Header />
-		<template v-if="fetchedFile.fetched">
+		<template v-if="loading">
+			<div class="downloader">
+				<div :class="`loading-progress progress-${roundedProgress}`" />
+				<Loading />
+			</div>
+		</template>
+		<template v-else-if="fetchedFile.fetched">
 			<div v-if="viewing">
 				<Preview :type="viewingType.type" :fetched-file="fetchedFile" @back="viewing = false" />
 			</div>
@@ -18,14 +24,12 @@
 				</div>
 			</div>
 		</template>
-		<Loading v-else />
 	</div>
 </template>
 
 <script>
 import * as IPFS from 'ipfs';
 import * as concat from 'uint8arrays/concat';
-import all from 'it-all';
 import Header from '../components/header';
 import Loading from '../components/spinner';
 import Preview from '../components/preview/index';
@@ -43,30 +47,38 @@ export default {
 			apiUrl: null,
 			viewing: false,
 			fetchedFile: {
+				loaded : 0,
+				size: 0,
 				name: '',
 				extension: '',
 				mimeType: '',
 				url: '',
 				fetched: false
-			}
+			},
+			loading: true
 		};
 	},
 	computed: {
 		viewingType () {
 			if (['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/webp'].includes(this.fetchedFile?.mimeType?.toLowerCase())) {
-				this.viewing = true;
 				return {
 					type: 'ImagePreview',
 					label: 'Image'
 				};
 			} else if (['video/ogg', 'video/mp4', 'video/H264', 'video/h264-rcdo', 'video/h264-svc', 'video/webm'].includes(this.fetchedFile?.mimeType?.toLowerCase())) {
-				this.viewing = true;
 				return {
 					type: 'VideoPreview',
 					label: 'Video'
 				};
 			}
 			return null;
+		},
+		progress () {
+			return this.fetchedFile.loaded / this.fetchedFile.size;
+		},
+		roundedProgress () {
+			const percent = Number(((this.fetchedFile.loaded / this.fetchedFile.size)* 100).toFixed(0));
+			return Math.round(percent / 10) * 10;
 		}
 	},
 	async mounted () {
@@ -87,11 +99,37 @@ export default {
 		window.node = null;
 	},
 	methods: {
+		setProgress (numerator) {
+			this.fetchedFile.loaded += numerator;
+		},
 		async get () {
-			const { key: keyValue, cid, name, extension, mimeType } = (await this.$axios.get(`${this.apiUrl}/files/${this.getFile}`))?.data;
+			let keyValue, cid, name, extension, size, mimeType;
+			try {
+				const data = (await this.$axios.get(`${this.apiUrl}/files/${this.getFile}`))?.data;
+				keyValue = data.key;
+				cid = data.cid;
+				name = data.name;
+				extension = data.extension;
+				size = data.size;
+				mimeType = data.mimeType;
+			} catch (err) {
+				console.error(err);
+				window.consyn.parseNotification({
+					type: 'error',
+					message: {
+						content: "We weren't able to fetch this file! Please try again."
+					}
+				});
+			}
 			const keyBuffer = Buffer.from(keyValue, 'hex');
 			const key = await window.crypto.subtle.importKey('raw', keyBuffer, 'AES-CTR', false, ['encrypt', 'decrypt']);
-			const fileData = concat(await all(this.node.cat(cid)));
+			const stream = this.node.cat(cid);
+			this.fetchedFile.size = size;
+			let fileData = new Uint8Array([]);
+			for await (const chunk of stream) {
+				fileData = concat([fileData, chunk]);
+				this.setProgress(chunk.length, fileData.length);
+			}
 			const decrypted = await this.decryptFile(fileData, key);
 			const blob = new Blob([decrypted], { type: mimeType });
 			const url = URL.createObjectURL(blob);
@@ -100,6 +138,10 @@ export default {
 			this.fetchedFile.mimeType = mimeType;
 			this.fetchedFile.url = url;
 			this.fetchedFile.fetched = true;
+			if (this.viewingType) {
+				this.viewing = true;
+			}
+			this.loading = false;
 		},
 		async decryptFile(file, key) {
 			const iv = new Uint8Array(16);
@@ -131,6 +173,17 @@ export default {
 
 	&.preview {
 		@apply mr-2;
+	}
+}
+
+.loading-progress {
+	@apply w-0 absolute top-0 left-0 h-1 bg-blue-500;
+	transition: width 0.1s linear;
+
+	@for $i from 0 through 10 {
+		&.progress-#{$i * 10} {
+			width: calc(#{$i} * 10%);
+		}
 	}
 }
 </style>
