@@ -45,6 +45,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.preview {
+	@apply pt-16 pb-8;
+}
 .back {
 	@apply absolute top-0 left-0 ml-2 mt-2 z-10;
 }
