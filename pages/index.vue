@@ -8,7 +8,7 @@
 					<input ref="fileInput" type="file" name="filefield" :multiple="false" @change="handleFile">
 					<div class="visible-upload-wrapper">
 						<div class="filefield-wrapper">
-							<label for="filefield" @click.prevent="fileClick">
+							<label class="file-field" for="filefield" @click.prevent="fileClick">
 								<template v-if="fileNameAndExtension">
 									<span class="file-name">{{ fileNameAndExtension.fileName }}</span>
 									<span class="file-extension">.{{ fileNameAndExtension.fileExtension }}</span>
@@ -18,16 +18,44 @@
 								</template>
 							</label>
 						</div>
-						<input type="submit" class="button" :disabled="!file">
+						<input type="submit" value="Submit" class="button" :disabled="!file || !valid">
+					</div>
+					<div v-if="file" class="settings">
+						<label for="encrypted" title="Should we encrypt this file or not?">
+							Encrypt
+							<input v-model="settings.encrypted" name="encrypted" type="checkbox">
+						</label>
+						<label for="one-time-use" title="If selected, this file will be deleted after it is viewed.">
+							Delete After Viewing
+							<input v-model="settings.oneTimeUse" name="one-time-use" type="checkbox">
+						</label>
+						<label for="password-protection" title="Should we password-protect this file?">
+							Password Protection
+							<input v-model="settings.passwordProtection" name="password-protection" type="checkbox">
+						</label>
+						<label v-if="settings.passwordProtection" for="password">
+							Password
+							<input v-model="settings.password" type="password" name="password">
+						</label>
 					</div>
 				</form>
 			</div>
 		</div>
 		<div v-else class="share">
 			<h2>Shareable link</h2>
-			<div class="link" title="Click to copy" @click.prevent="copyToClipboard">
+			<div class="link" title="Click to copy" @click.prevent="copyLink">
 				<pre id="copyLink">{{ fileLinkText }}</pre>
-				<span :class="{ 'copied': true, active: copied }">Copied!</span>
+				<span :class="{ 'copied': true, active: copiedLink }">Copied!</span>
+				<span class="copy-icon">
+					<svg>
+						<use href="#copyIcon" />
+					</svg>
+				</span>
+			</div>
+			<h2>IPFS CID</h2>
+			<div class="link" title="Click to copy" @click.prevent="copyCID">
+				<pre id="copyCID">{{ cid }}</pre>
+				<span :class="{ 'copied': true, active: copiedCID }">Copied!</span>
 				<span class="copy-icon">
 					<svg>
 						<use href="#copyIcon" />
@@ -61,8 +89,16 @@ export default {
 			uploadedFile: null,
 			fileResult: null,
 			apiUrl: null,
-			copied: false,
-			loading: true
+			copiedLink: false,
+			copiedCID: false,
+			loading: true,
+			cid: '',
+			settings: {
+				encrypted: true,
+				passwordProtection: false,
+				password: '',
+				oneTimeUse: false
+			}
 		};
 	},
 	computed: {
@@ -79,6 +115,14 @@ export default {
 				fileName,
 				fileExtension
 			};
+		},
+		valid () {
+			if (this.settings.passwordProtection) {
+				if (this.settings?.password?.length < 1) {
+					return false;
+				}
+			}
+			return true;
 		}
 	},
 	async mounted () {
@@ -116,12 +160,28 @@ export default {
 		}
 	},
 	methods: {
-		async copyToClipboard () {
+		async copyLink () {
 			try {
 				await navigator.clipboard.writeText(this.fileLinkText);
-				this.copied = true;
+				this.copiedLink = true;
 				setTimeout(() => {
-					this.copied = false;
+					this.copiedLink = false;
+				}, 1000);
+			} catch (err) {
+				window.consyn.parseNotification({
+					type: 'error',
+					message: {
+						content: 'Could not copy to clipboard! You will have to copy manually.'
+					}
+				});
+			}
+		},
+		async copyCID () {
+			try {
+				await navigator.clipboard.writeText(this.cid);
+				this.copiedCID = true;
+				setTimeout(() => {
+					this.copiedCID = false;
 				}, 1000);
 			} catch (err) {
 				window.consyn.parseNotification({
@@ -186,49 +246,67 @@ export default {
 			if (this.reader) {
 				this.reader.abort();
 			}
-			try {
-				const keyRequest = await this.$axios.post(`${this.apiUrl}/keys`, { headers: { accept: 'application/json' } });
-				const keyValue = keyRequest?.data?.key;
 
-				if (!keyValue) {
-					if (keyRequest?.data?.errors) {
-						this.loading = false;
-						for (const error of keyRequest?.data?.errors) {
-							window.consyn.parseNotification({
-								type: 'error',
-								message: error
-							});
-						}
-						return;
-					} else {
-						throw new Error('Something went wrong submitting the file...');
-					}
+			try {
+				const settings = {
+					encrypted: this.settings.encrypted,
+					passwordProtection: this.settings.passwordProtection,
+					oneTimeUse: this.settings.oneTimeUse
+				};
+
+				if (settings.passwordProtection) {
+					settings.password = this.settings.password;
 				}
 
-				let cid, key;
-				try {
-					const keyBuffer = Buffer.from(keyValue, 'hex');
-					key = await window.crypto.subtle.importKey('raw', keyBuffer, 'AES-CTR', false, ['encrypt', 'decrypt']);
-				} catch (err) {
-					this.loading = false;
-					return window.consyn.parseNotification({
-						type: 'error',
-						message: {
-							content: 'Something went wrong while importing the encryption key...'
+				let cid, key, keyValue;
+				if (settings.encrypted) {
+					const keyRequest = await this.$axios.post(`${this.apiUrl}/keys`, { headers: { accept: 'application/json' } });
+					keyValue = keyRequest?.data?.key;
+
+					if (!keyValue) {
+						if (keyRequest?.data?.errors) {
+							this.loading = false;
+							for (const error of keyRequest?.data?.errors) {
+								window.consyn.parseNotification({
+									type: 'error',
+									message: error
+								});
+							}
+							return;
+						} else {
+							throw new Error('Something went wrong submitting the file...');
 						}
-					});
+					}
+
+					try {
+						const keyBuffer = Buffer.from(keyValue, 'hex');
+						key = await window.crypto.subtle.importKey('raw', keyBuffer, 'AES-CTR', false, ['encrypt', 'decrypt']);
+					} catch (err) {
+						this.loading = false;
+						return window.consyn.parseNotification({
+							type: 'error',
+							message: {
+								content: 'Something went wrong while importing the encryption key...'
+							}
+						});
+					}
 				}
 
 				this.reader = new FileReader();
 				const reader = this.reader;
 
 				try {
-					cid = await new Promise((resolve, reject) => {
+					this.cid = await new Promise((resolve, reject) => {
 						try {
 							reader.addEventListener('load', async (e) => {
 								const blob = e.target.result;
-								const encryptedBlob = await this.encryptFile(blob, key);
-								const { path } = await this.node.add(encryptedBlob);
+								let blobToSend;
+								if (settings.encrypted) {
+									blobToSend = await this.encryptFile(blob, key);
+								} else {
+									blobToSend = blob;
+								}
+								const { path } = await this.node.add(blobToSend);
 								resolve(path);
 							});
 							reader.readAsArrayBuffer(this.file);
@@ -236,6 +314,7 @@ export default {
 							reject(err);
 						}
 					});
+					cid = this.cid;
 				} catch (err) {
 					this.loading = false;
 					return window.consyn.parseNotification({
@@ -259,20 +338,27 @@ export default {
 				}
 
 				const size = this.file.size;
-				const [name, extension] = this.file.name.split('.');
+				const splitted = this.file.name.split('.');
+				const extension = splitted.pop();
+				const name = splitted.join('');
 
 				const payload = {
 					name,
 					extension,
 					mimeType: this.file.type,
-					key: keyValue,
 					size,
-					cid
+					cid,
+					settings
 				};
+
+				if (settings.encrypted) {
+					payload.key = keyValue;
+				}
 
 				let result;
 				try {
 					result = await this.$axios.post(`${this.apiUrl}/files`, payload, { headers: { accept: 'application/json', 'content-type': 'application/json' } });
+					console.log(result);
 				} catch (err) {
 					this.loading = false;
 					return window.consyn.parseNotification({
@@ -317,7 +403,7 @@ export default {
 }
 
 .link,
-label {
+.file-field {
 	@apply px-2 py-3 md:px-6 bg-blue-100 cursor-pointer transition duration-200 ease-in-out hover:bg-blue-200;
 }
 
@@ -349,6 +435,10 @@ label {
 
 	h2 {
 		@apply text-lg;
+
+		&:not(:first-of-type) {
+			@apply mt-4;
+		}
 	}
 }
 
@@ -358,7 +448,7 @@ label {
 		@apply mb-2 text-xl;
 	}
 
-	label {
+	.file-field {
 		@apply flex items-end justify-start w-full rounded-tl-3xl rounded-bl-3xl text-blue-900 font-bold;
 
 		span {
@@ -391,6 +481,22 @@ form {
 
 		.filefield-wrapper {
 			@apply block w-full max-w-4/5 overflow-hidden;
+		}
+	}
+
+	.settings {
+		@apply flex flex-col mt-4 md:px-2 max-w-sm w-full;
+
+		label {
+			@apply px-2 py-2 w-full uppercase text-blue-900 text-sm flex items-center justify-start;
+		}
+
+		input {
+			@apply ml-2;
+		}
+
+		input[type="password"] {
+			@apply rounded-3xl bg-blue-100 px-2 py-1;
 		}
 	}
 }

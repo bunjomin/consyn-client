@@ -7,6 +7,15 @@
 				<Loading />
 			</div>
 		</template>
+		<template v-else-if="enterPassword">
+			<form class="enter-password" @submit.prevent="submitPassword">
+				<label for="password">
+					Enter Password
+					<input name="password" type="password" v-model="password">
+				</label>
+				<input type="submit" value="Submit" class="button">
+			</form>
+		</template>
 		<template v-else-if="fetchedFile.fetched">
 			<div v-if="viewing">
 				<Preview :type="viewingType.type" :fetched-file="fetchedFile" @back="viewing = false" />
@@ -46,6 +55,8 @@ export default {
 			getFile: '',
 			apiUrl: null,
 			viewing: false,
+			enterPassword: false,
+			password: '',
 			fetchedFile: {
 				loaded : 0,
 				size: 0,
@@ -54,6 +65,17 @@ export default {
 				mimeType: '',
 				url: '',
 				fetched: false
+			},
+			fileData: {
+				keyValue: '',
+				cid: '',
+				name: '',
+				extension: '',
+				size: 0,
+				mimeType: '',
+				passwordProtected: false,
+				oneTimeUse: false,
+				encrypted: true
 			},
 			loading: true
 		};
@@ -102,46 +124,103 @@ export default {
 		setProgress (numerator) {
 			this.fetchedFile.loaded += numerator;
 		},
-		async get () {
-			let keyValue, cid, name, extension, size, mimeType;
-			try {
-				const data = (await this.$axios.get(`${this.apiUrl}/files/${this.getFile}`))?.data;
-				keyValue = data.key;
-				cid = data.cid;
-				name = data.name;
-				extension = data.extension;
-				size = data.size;
-				mimeType = data.mimeType;
-			} catch (err) {
-				console.error(err);
-				window.consyn.parseNotification({
-					type: 'error',
-					message: {
-						content: "We weren't able to fetch this file! Please try again."
-					}
-				});
+		async loadFile () {
+			let key;
+			if (this.fileData.encrypted) {
+				const keyBuffer = Buffer.from(this.fileData.key, 'hex');
+				key = await window.crypto.subtle.importKey('raw', keyBuffer, 'AES-CTR', false, ['encrypt', 'decrypt']);
 			}
-			const keyBuffer = Buffer.from(keyValue, 'hex');
-			const key = await window.crypto.subtle.importKey('raw', keyBuffer, 'AES-CTR', false, ['encrypt', 'decrypt']);
-			const stream = this.node.cat(cid);
-			this.fetchedFile.size = size;
+			const stream = this.node.cat(this.fileData.cid);
+			this.fetchedFile.size = this.fileData.size;
+
 			let fileData = new Uint8Array([]);
 			for await (const chunk of stream) {
 				fileData = concat([fileData, chunk]);
 				this.setProgress(chunk.length, fileData.length);
 			}
-			const decrypted = await this.decryptFile(fileData, key);
-			const blob = new Blob([decrypted], { type: mimeType });
+
+			const decrypted = this.fileData.encrypted ? await this.decryptFile(fileData, key) : fileData;
+			const blob = new Blob([decrypted], { type: this.fileData.mimeType });
 			const url = URL.createObjectURL(blob);
-			this.fetchedFile.name = name;
-			this.fetchedFile.extension = extension;
-			this.fetchedFile.mimeType = mimeType;
+			this.fetchedFile.name = this.fileData.name;
+			this.fetchedFile.extension = this.fileData.extension;
+			this.fetchedFile.mimeType = this.fileData.mimeType;
 			this.fetchedFile.url = url;
 			this.fetchedFile.fetched = true;
 			if (this.viewingType) {
 				this.viewing = true;
 			}
+			this.enterPassword = false;
+			this.password = '';
 			this.loading = false;
+		},
+		async submitPassword () {
+			this.loading = true;
+			try {
+				const data = (await this.$axios.post(`${this.apiUrl}/files/${this.getFile}/password`, { password: this.password }))?.data;
+				if (data.errors) {
+					for (const error of data.errors) {
+						window.consyn.parseNotification({
+							type: 'error',
+							message: error
+						});
+					}
+					this.loading = false;
+					return;
+				}
+
+				this.fileData = {
+					...this.fileData,
+					...data
+				};
+
+				this.loadFile();
+			} catch (err) {
+				this.loading = false;
+				console.error(err);
+				window.consyn.parseNotification({
+					type: 'error',
+					message: {
+						content: "Something went wrong!"
+					}
+				});
+			}
+		},
+		async get () {
+			try {
+				const data = (await this.$axios.get(`${this.apiUrl}/files/${this.getFile}`))?.data;
+				if (data.errors) {
+					for (const error of data.errors) {
+						window.consyn.parseNotification({
+							type: 'error',
+							message: error
+						});
+					}
+					this.loading = false;
+					return;
+				}
+				this.fileData = {
+					...this.fileData,
+					...data
+				};
+			} catch (err) {
+				this.loading = false;
+				console.error(err);
+				window.consyn.parseNotification({
+					type: 'error',
+					message: {
+						content: "Could not find that file!"
+					}
+				});
+				this.$router.push('/');
+			}
+
+			if (this.fileData.passwordProtected) {
+				this.enterPassword = true;
+				this.loading = false;
+			} else {
+				this.loadFile();
+			}
 		},
 		async decryptFile(file, key) {
 			const iv = new Uint8Array(16);
@@ -185,5 +264,17 @@ export default {
 			width: calc(#{$i} * 10%);
 		}
 	}
+}
+
+.enter-password {
+	@apply flex items-center justify-center px-2 py-3 sm:px-4 sm:py-6 w-full;
+}
+
+input {
+	@apply ml-2;
+}
+
+input[type="password"] {
+	@apply rounded-3xl bg-blue-100 px-2 py-1;
 }
 </style>
