@@ -231,7 +231,7 @@ export default {
 }
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .downloader {
 	@apply px-2 py-3 md:px-6 md:py-4 flex flex-col items-center;
 
