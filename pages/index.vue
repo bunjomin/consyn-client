@@ -5,22 +5,7 @@
 		<div v-else-if="!fileResult" class="uploader">
 			<div class="upload">
 				<form @submit.prevent="submit">
-					<input ref="fileInput" type="file" name="filefield" :multiple="false" @change="handleFile">
-					<div class="visible-upload-wrapper">
-						<div class="filefield-wrapper">
-							<label class="file-field" for="filefield" @click.prevent="fileClick">
-								<template v-if="fileNameAndExtension">
-									<span class="file-name">{{ fileNameAndExtension.fileName }}</span>
-									<span class="file-extension">.{{ fileNameAndExtension.fileExtension }}</span>
-								</template>
-								<template v-else>
-									<span>Select a file...</span>
-								</template>
-							</label>
-						</div>
-						<input type="submit" value="Submit" class="button" :disabled="!file || !valid">
-					</div>
-					<div v-if="file" class="settings">
+					<div class="settings">
 						<label for="encrypted" title="Should we encrypt this file or not?">
 							Encrypt
 							<input v-model="settings.encrypted" name="encrypted" type="checkbox">
@@ -37,6 +22,21 @@
 							Password
 							<input v-model="settings.password" type="password" name="password">
 						</label>
+					</div>
+					<input ref="fileInput" type="file" name="filefield" :multiple="false" @change="handleFile">
+					<div class="visible-upload-wrapper">
+						<div class="filefield-wrapper">
+							<label class="file-field" for="filefield" @click.prevent="fileClick">
+								<template v-if="fileNameAndExtension">
+									<span class="file-name">{{ fileNameAndExtension.fileName }}</span>
+									<span class="file-extension">.{{ fileNameAndExtension.fileExtension }}</span>
+								</template>
+								<template v-else>
+									<span>Select a file...</span>
+								</template>
+							</label>
+						</div>
+						<input type="submit" value="Submit" class="button" :disabled="!file || !valid">
 					</div>
 				</form>
 			</div>
@@ -485,7 +485,7 @@ form {
 	}
 
 	.settings {
-		@apply flex flex-col mt-4 md:px-2 max-w-sm w-full;
+		@apply flex flex-col mb-4 md:px-2 max-w-sm w-full;
 
 		label {
 			@apply px-2 py-2 w-full uppercase text-blue-900 text-sm flex items-center justify-start;
